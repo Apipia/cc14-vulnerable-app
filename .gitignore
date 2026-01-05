@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Database
+database/*.db
+database/*.db-journal
+
+# SSL Certificates (generated automatically)
+backend/certs/*.key
+backend/certs/*.crt
+backend/certs/*.csr
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+build/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Instructor-only materials (not for students)
+instructor-only/
+
+# Temporary files
+cookies.txt
+*.tmp
+

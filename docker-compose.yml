@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./database:/app/database
+      - ./backend:/app
+      - ./backend/certs:/app/certs  # Mount certificates directory
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=5001
+    # Entrypoint script handles database init and certificate generation
+    # No need for separate database-init service
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=https://localhost:5001
+    depends_on:
+      - backend
+
+volumes:
+  database_data:
