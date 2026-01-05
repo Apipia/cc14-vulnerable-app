@@ -2,7 +2,14 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
 // Database path
-const dbPath = path.join(__dirname, '../../database/claim_manager.db');
+// Use absolute path or path relative to app directory
+// In Docker: /app/database, locally: ../../database
+const dbPath = process.env.DB_PATH || path.join(__dirname, '../../database/claim_manager.db');
+// Ensure database directory exists
+const fs = require('fs');
+if (!fs.existsSync(path.dirname(dbPath))) {
+  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+}
 
 // Create database connection
 const db = new sqlite3.Database(dbPath, (err) => {

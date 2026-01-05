@@ -13,12 +13,20 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 
 // Database setup
-const dbPath = path.join(__dirname, '../database/claim_manager.db');
+// Use absolute path or path relative to app directory
+// In Docker: /app/database, locally: ../database
+const dbPath = process.env.DB_PATH || path.join(__dirname, '../database/claim_manager.db');
+// Ensure database directory exists
+const dbDir = path.dirname(dbPath);
+if (!fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+}
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error('Error opening database:', err.message);
+    console.error('Database path:', dbPath);
   } else {
-    console.log('Connected to SQLite database');
+    console.log('Connected to SQLite database at:', dbPath);
   }
 });
 

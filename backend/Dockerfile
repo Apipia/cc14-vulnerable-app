@@ -1,14 +1,19 @@
 FROM node:18-alpine
 
-# Install openssl for certificate generation
-RUN apk add --no-cache openssl
+# Install build dependencies for native modules (sqlite3)
+RUN apk add --no-cache \
+    openssl \
+    python3 \
+    make \
+    g++ \
+    sqlite-dev
 
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
+# Install dependencies (this will compile sqlite3 for Alpine Linux)
 RUN npm install
 
 # Copy source code
