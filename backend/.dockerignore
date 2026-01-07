@@ -1,0 +1,10 @@
+node_modules
+npm-debug.log
+*.log
+.env
+.env.local
+.DS_Store
+certs/*.key
+certs/*.crt
+certs/*.csr
+
