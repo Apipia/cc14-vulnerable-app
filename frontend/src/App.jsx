@@ -156,6 +156,17 @@ function App() {
     }
   }
 
+  const handleEditClaim = (claim) => {
+    setEditingClaim(claim)
+    // Pre-populate the form with existing claim values
+    setClaimForm({
+      title: claim.title || '',
+      description: claim.description || '',
+      amount: claim.amount || '',
+      category: claim.category || 'Other'
+    })
+  }
+
   const deleteClaim = async (claimId) => {
     if (window.confirm('Are you sure you want to delete this claim?')) {
       try {
@@ -467,7 +478,7 @@ function App() {
                           <FileText className="w-4 h-4" />
                         </button>
                         <button 
-                          onClick={() => setEditingClaim(claim)}
+                          onClick={() => handleEditClaim(claim)}
                           className="claim-action-btn edit"
                           title="Edit Claim"
                         >
