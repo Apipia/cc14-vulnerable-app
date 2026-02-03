@@ -1,6 +1,6 @@
 # Claim Manager - Security Workshop Application
 
-A modern web application for managing expense claims, built with Node.js, React, and SQLite. **This application is intentionally vulnerable and designed for security workshops and educational purposes.**
+A modern web application for managing expense claims, built with Node.js, React, and SQLite. **This application is intentionally vulnerable and designed for security workshops and educational purposes. This application was built with AI.**
 
 ## 🚀 Quick Start (Docker)
 
