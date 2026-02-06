@@ -12,6 +12,9 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+// Disable ETag generation to prevent If-None-Match headers
+app.set('etag', false);
+
 // Database setup
 // Use absolute path or path relative to app directory
 // In Docker: /app/database, locally: ../database
@@ -42,6 +45,14 @@ app.use(cors({
 app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse form-encoded bodies
 app.use(cookieParser());
+
+// Disable caching for workshop demo (prevents 304 Not Modified responses)
+app.use((req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
 
 // Authentication middleware (intentionally weak for workshop)
 const authenticateToken = (req, res, next) => {
@@ -174,7 +185,7 @@ app.get('/api/claims', authenticateToken, (req, res) => {
     }
     res.json(rows);
   });
-});
+});1
 
 // VULNERABLE: Broken Access Control - allows any user to see any claim
 app.get('/api/claims/:id', authenticateToken, (req, res) => {
