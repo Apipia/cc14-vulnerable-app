@@ -12,12 +12,16 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+// VULN: A02:2025 - Security Misconfiguration
 // Disable ETag generation to prevent If-None-Match headers
 app.set('etag', false);
+app.use((req, res, next) => {
+  res.setHeader('X-Powered-By', 'Express 4.18');           // leaks tech stack
+  res.setHeader('Server', 'ClaimManager/1.0');             // extra info leak
+  next();
+});
 
 // Database setup
-// Use absolute path or path relative to app directory
-// In Docker: /app/database, locally: ../database
 const dbPath = process.env.DB_PATH || path.join(__dirname, '../database/claim_manager.db');
 // Ensure database directory exists
 const dbDir = path.dirname(dbPath);
@@ -33,7 +37,9 @@ const db = new sqlite3.Database(dbPath, (err) => {
   }
 });
 
-// JWT Secret (insecure for workshop purposes)
+// VULN: A04:2025 Cryptographic Failures
+// VULN: A07:2025 Authentication Failures
+// Weak static secret, no rotation, short expiration possible, weak password check
 const JWT_SECRET = 'insecure-workshop-secret-key';
 
 // Middleware
@@ -46,6 +52,7 @@ app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse form-encoded bodies
 app.use(cookieParser());
 
+// VULN: A02:2025 - No caching headers are actually good here, but verbose error handling below leaks info
 // Disable caching for workshop demo (prevents 304 Not Modified responses)
 app.use((req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
@@ -71,6 +78,7 @@ const authenticateToken = (req, res, next) => {
   }
 };
 
+// VULN: A01:2025 Broken Access Control
 // Admin check middleware (intentionally broken for workshop)
 const requireAdmin = (req, res, next) => {
   // BROKEN: This should check req.user.role === 'admin' but doesn't
@@ -108,7 +116,7 @@ app.get('/api/test', (req, res) => {
   res.json({ message: 'API is working correctly!' });
 });
 
-// Authentication endpoints
+// Authentication endpoints (with vulnerabilities)
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
   
@@ -125,6 +133,7 @@ app.post('/api/login', (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    // VULN: A07:2025 Authentication Failures — still plain text compare
     // For workshop purposes, we'll use a simple password check
     // In real app, you'd use bcrypt.compare(password, user.password_hash)
     if (password !== 'password123') {
@@ -158,6 +167,18 @@ app.post('/api/login', (req, res) => {
   });
 });
 
+// VULN: A05:2025 Injection (made worse on purpose)
+// Raw concatenation instead of parameterized query
+app.get('/api/search', authenticateToken, (req, res) => {
+  const term = req.query.q || '';
+  // VULN: classic SQL injection — *DO NOT DO THIS*
+  const sql = `SELECT * FROM claims WHERE title LIKE '%${term}%' OR description LIKE '%${term}%'`;
+  db.all(sql, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
 app.post('/api/logout', (req, res) => {
   res.clearCookie('authToken');
   res.json({ message: 'Logged out successfully' });
@@ -187,7 +208,7 @@ app.get('/api/claims', authenticateToken, (req, res) => {
   });
 });1
 
-// VULNERABLE: Broken Access Control - allows any user to see any claim
+// VULN: Broken Access Control - allows any user to see any claim (IDOR)
 app.get('/api/claims/:id', authenticateToken, (req, res) => {
   const claimId = req.params.id;
   
@@ -227,7 +248,8 @@ app.post('/api/claims', authenticateToken, (req, res) => {
   });
 });
 
-// VULNERABLE: Stored XSS - allows malicious scripts in claim descriptions
+// VULN: A05 + Stored XSS (allows malicious scripts in claim descriptions)
+// description can contain <script>alert(1)</script>
 app.put('/api/claims/:id', authenticateToken, (req, res) => {
   const claimId = req.params.id;
   const { title, description, amount, category } = req.body;
@@ -246,6 +268,21 @@ app.put('/api/claims/:id', authenticateToken, (req, res) => {
     res.json({ message: 'Claim updated successfully' });
   });
 });
+
+// VULN: A10:2025 Mishandling of Exceptional Conditions (new in 2025)
+// Leaks stack traces / DB paths / versions in errors
+app.use((err, req, res, next) => {
+  console.error(err.stack); // logs full stack
+  res.status(500).json({
+    error: 'Internal Server Error',
+    details: err.message,          // leaks info
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+});
+
+// VULN: A09:2025 Security Logging & Monitoring Failures
+// Almost no structured logging — only console.log
+// No alert-worthy events (failed logins, privilege escalation attempts, etc.)
 
 // Admin endpoints with broken authorization
 app.get('/api/admin/users', authenticateToken, requireAdmin, (req, res) => {
@@ -285,6 +322,19 @@ app.delete('/api/admin/claims/:id', authenticateToken, requireAdmin, (req, res) 
     res.json({ message: 'Claim deleted successfully' });
   });
 });
+
+/*
+// VULN: A03:2025 Software Supply Chain Failures
+// Would live in package.json + node_modules
+// e.g. old vulnerable version: "jsonwebtoken": "8.5.1" (known vulns)
+// or compromised dependency via typo-squatting / malware in transitive deps
+// Mitigation: use npm audit, lockfile, SBOM, sigstore/cosign, etc.
+
+// VULN: A08:2025 Software and Data Integrity Failures
+// No signature verification on JWT (alg:none possible if misconfigured lib)
+// No checksum on uploaded files (if you add file upload later)
+// No integrity check on auto-updates / CI artifacts
+*/
 
 // Graceful shutdown
 process.on('SIGINT', () => {
